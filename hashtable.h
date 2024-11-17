@@ -97,17 +97,30 @@ static KH_Dict *KH_ResizeDict(KH_Dict *self) {
 	memset(new_pairs, 0, sizeof *self->pairs * new_size);
 	
 	// Copy old pairs to new pairs
-	for (size_t i = 0, j = 0; i < self->data_alloced; i++) {
+	size_t j = 0;
+	
+	for (size_t i = 0; i < self->data_alloced; i++) {
 		if (!self->pairs[i].key || !self->pairs[i].value) {
 			continue;
 		}
 		
 		new_pairs[j].key = self->pairs[i].key;
 		new_pairs[j].value = self->pairs[i].value;
+		KH_InsertSlot(new_slots, new_size, new_pairs[j].key->hash, j);
 		j++;
 	}
 	
-	// Copy 
+	// j is now the new data_count
+	
+	// We should be ready to free old stuff, place new stuff
+	free(self->slots);
+	free(self->pairs);
+	self->slots = new_slots;
+	self->pairs = new_pairs;
+	self->data_alloced = new_size;
+	self->data_count = j;
+	
+	return self;
 }
 #endif // KHASHTABLE_IMPLEMENTATION
 
