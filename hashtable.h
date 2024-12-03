@@ -43,7 +43,7 @@ typedef struct KH_Blob {
 	const uint8_t data[0];
 } KH_Blob;
 
-typedef struct uint32_t KH_Slot;
+typedef uint32_t KH_Slot;
 
 typedef struct KH_DictPair {
 	KH_Blob *key;
@@ -68,7 +68,7 @@ static kh_hash_t KH_Hash(const uint8_t *buffer, const size_t length) {
 	return hash;
 }
 
-KH_Blob *KH_CreateBlob(uint8_t *buffer, size_t length) {
+KH_Blob *KH_CreateBlob(const uint8_t *buffer, const size_t length) {
 	KH_Blob *blob = malloc(sizeof *blob + length);
 	
 	if (!blob) {
@@ -83,7 +83,7 @@ KH_Blob *KH_CreateBlob(uint8_t *buffer, size_t length) {
 }
 
 KH_Blob *KH_BlobForString(const char *str) {
-	return KH_CreateBlob(str, strlen(str) + 1);
+	return KH_CreateBlob((const uint8_t *) str, strlen(str) + 1);
 }
 
 static bool KH_BlobEqual(KH_Blob *blob1, KH_Blob *blob2) {
@@ -111,11 +111,12 @@ static void KH_InsertSlot(KH_Slot *slots, size_t nslots, uint32_t hash, uint32_t
 	uint32_t slot_index = KH_BlobStartingIndexForSize(hash, nslots);
 	
 	while (1) {
-		slot_index = (slot_index + 1) & (nslots - 1);
-		
 		if (slots[slot_index] == KH_HASH_EMPTY || slots[slot_index] == KH_HASH_DELETED) {
 			slots[slot_index] = index;
+			break;
 		}
+		
+		slot_index = (slot_index + 1) & (nslots - 1);
 	}
 }
 
@@ -138,7 +139,9 @@ static KH_Dict *KH_ResizeDict(KH_Dict *self) {
 	}
 	
 	// Init slots to empty (0xFFFFFFFF)
-	memset(new_slots, 0xff, sizeof *self->slots * new_size);
+	for (size_t i = 0; i < new_size; i++) {
+		new_slots[i] = KH_HASH_EMPTY;
+	}
 	
 	// Init pairs to empty (NULL)
 	memset(new_pairs, 0, sizeof *self->pairs * new_size);
@@ -153,6 +156,7 @@ static KH_Dict *KH_ResizeDict(KH_Dict *self) {
 			break;
 		}
 		
+		// printf("copy kv pair i=0x%zx j=0x%zx\n", i, j);
 		new_pairs[j].key = self->pairs[i].key;
 		new_pairs[j].value = self->pairs[i].value;
 		KH_InsertSlot(new_slots, new_size, new_pairs[j].key->hash, j);
@@ -179,7 +183,7 @@ static bool KH_DictInsert(KH_Dict *self, KH_Blob *key, KH_Blob *value) {
 	
 	// Resize if load factor > 0.625, around Wikipedia's recommendation of
 	// resizing at 0.6-0.75
-	if (((self->data_count >> 1) + (self->data_count >> 3)) > self->data_alloced) {
+	if (((self->data_count >> 1) + (self->data_count >> 3)) >= self->data_alloced) {
 		self = KH_ResizeDict(self);
 		
 		if (!self) {

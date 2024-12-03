@@ -1,6 +1,7 @@
+#include <stdio.h>
+
 #define KHASHTABLE_IMPLEMENTATION
 #include "hashtable.h"
-#include <stdio.h>
 
 void print_dict(KH_Dict *dict) {
 	size_t size = KH_DictLen(dict);
