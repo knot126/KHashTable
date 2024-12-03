@@ -9,6 +9,8 @@ enum {
 	KH_HASH_DELETED = 0xfffffffe,
 };
 
+#define KH_NOT_FOUND ((size_t)-1)
+
 typedef uint32_t kh_hash_t;
 typedef struct KH_Blob {
 	size_t length;
@@ -16,9 +18,10 @@ typedef struct KH_Blob {
 	const uint8_t data[0];
 } KH_Blob;
 
-typedef struct KH_Slot {
-	uint32_t index;
-} KH_Slot;
+// typedef struct KH_Slot {
+// 	uint32_t index;
+// } KH_Slot;
+typedef struct uint32_t KH_Slot;
 
 typedef struct KH_DictPair {
 	KH_Blob *key;
@@ -57,13 +60,29 @@ KH_Blob *KH_CreateBlob(uint8_t *buffer, size_t length) {
 	return blob;
 }
 
-static uint32_t KH_BlobSlotIndexForSz(uint32_t hash, size_t size) {
+static bool KH_BlobEqual(KH_Blob *blob1, KH_Blob *blob2) {
+	if (blob1 == blob2) {
+		return true;
+	}
+	
+	if (blob1->hash != blob2->hash || blob1->length != blob2->length) {
+		return false;
+	}
+	
+	return memcmp(blob1->data, blob2->data, blob1->length) == 0;
+}
+
+void KH_ReleaseBlob(KH_Blob *blob) {
+	free(blob);
+}
+
+static uint32_t KH_BlobStartingIndexForSize(uint32_t hash, size_t size) {
 	// WARNING: Only works for powers of two
 	return hash & (size - 1);
 }
 
 static void KH_InsertSlot(KH_Slot *slots, size_t nslots, uint32_t hash, uint32_t index) {
-	uint32_t slot_index = KH_BlobSlotIndexForSz(hash, nslots);
+	uint32_t slot_index = KH_BlobStartingIndexForSize(hash, nslots);
 	
 	while (1) {
 		slot_index = (slot_index + 1) & (nslots - 1);
@@ -87,6 +106,8 @@ static KH_Dict *KH_ResizeDict(KH_Dict *self) {
 	KH_DictPair *new_pairs = malloc(sizeof *self->pairs * new_size);
 	
 	if (!new_slots || !new_pairs) {
+		free(new_slots);
+		free(new_pairs);
 		return NULL;
 	}
 	
@@ -121,6 +142,114 @@ static KH_Dict *KH_ResizeDict(KH_Dict *self) {
 	self->data_count = j;
 	
 	return self;
+}
+
+static bool KH_DictInsert(KH_Dict *self, KH_Blob *key, KH_Blob *value) {
+	/**
+	 * Insert an entry into the hash table. The key must not exist.
+	 */
+	
+	// Resize if load factor > 0.625, around Wikipedia's recommendation of
+	// resizing at 0.6-0.75
+	if (((self->data_count >> 1) + (self->data_count >> 3)) > self->data_alloced) {
+		self = KH_ResizeDict(self);
+		
+		if (!self) {
+			return false;
+		}
+	}
+	
+	self->pairs[self->data_count].key = key;
+	self->pairs[self->data_count].value = value;
+	
+	KH_InsertSlot(self->slots, self->data_alloced, key->hash, self->data_count);
+	
+	self->data_count++;
+	
+	return true;
+}
+
+static size_t KH_DictLookupIndex(KH_Dict *self, KH_Blob *key) {
+	/**
+	 * Find the index of a pair given its key. Returns the index or KH_NOT_FOUND
+	 * if none was found.
+	 */
+	
+	uint32_t slot_index = KH_BlobStartingIndexForSize(key->hash, self->data_alloced);
+	
+	for (size_t i = 0; i < self->data_alloced; i++) {
+		KH_Slot slot = self->slots[(slot_index + i) & (self->data_count - 1)];
+		
+		// Empty, never-used slot which won't have anything we're looking for
+		// located after it
+		if (slot == KH_HASH_EMPTY) {
+			break;
+		}
+		
+		// Once used slot which may still have hits after it
+		if (slot == KH_HASH_DELETED) {
+			continue;
+		}
+		
+		// If the key we're looking up matches the key indexed by the current
+		// slot, this is a hit and it should be returned.
+		if (KH_BlobEqual(key, self->pairs[slot].key)) {
+			return slot;
+		}
+	}
+	
+	return KH_NOT_FOUND;
+}
+
+static void KH_DictChange(KH_Dict *self, size_t index, KH_Blob *value) {
+	/**
+	 * Change the value for a key that already exists, given the index to the
+	 * key.
+	 */
+	
+	free(self->pairs[index].value);
+	self->pairs[index].value = value;
+}
+
+bool KH_DictSet(KH_Dict *self, KH_Blob *key, KH_Blob *value) {
+	/**
+	 * Insert a (key, value) pair into the dictionary, overwriting any existing
+	 * one.
+	 */
+	
+	size_t index = KH_DictLookupIndex(self, key);
+	
+	if (index == KH_NOT_FOUND) {
+		return KH_DictInsert(self, key, value);
+	}
+	else {
+		KH_DictChange(self, index, value);
+		free(key);
+		return true;
+	}
+}
+
+KH_Blob *KH_DictGet(KH_Dict *self, KH_Blob *key) {
+	/**
+	 * Get a value blob by a key
+	 */
+	
+	size_t index = KH_DictLookupIndex(self, key);
+	
+	if (index == KH_NOT_FOUND) {
+		return NULL;
+	}
+	else {
+		return self->pairs[index].value;
+	}
+}
+
+bool KH_DictHas(KH_Dict *self, KH_Blob *key) {
+	/**
+	 * Check if the dict has a pair with a given key
+	 */
+	
+	return KH_DictLookupIndex(self, key) != KH_NOT_FOUND;
 }
 #endif // KHASHTABLE_IMPLEMENTATION
 
