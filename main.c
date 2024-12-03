@@ -8,9 +8,18 @@ void print_dict(KH_Dict *dict) {
 	printf("dict contents (%zu items):\n", size);
 	
 	for (size_t i = 0; i < size; i++) {
-		printf("\t%s -> %s\n", KH_DictKeyIter(dict, i)->data, KH_DictValueIter(dict, i)->data);
+		printf("  * [0x%zx] %s -> %s\n", i, KH_DictKeyIter(dict, i)->data, KH_DictValueIter(dict, i)->data);
 	}
 }
+
+void print_slots(KH_Dict *dict) {
+	printf("Slots (%zu)\n", dict->data_alloced);
+	for (size_t i = 0; i < dict->data_alloced; i++) {
+		printf("  - [0x%zx] 0x%08x\n", i, dict->slots[i]);
+	}
+}
+
+#define PHAS(KEY) printf("Has '%s' ? %b\n", KEY, KH_DictHas(myDict, KH_BlobForString(KEY)));
 
 int main(int argc, char *argv[]) {
 	KH_Dict *myDict = KH_CreateDict();
@@ -20,16 +29,39 @@ int main(int argc, char *argv[]) {
 	KH_DictSet(myDict, KH_BlobForString("iscute"), KH_BlobForString("no :<"));
 	KH_DictSet(myDict, KH_BlobForString("urmom"), KH_BlobForString("hehehe"));
 	
+	// print_slots(myDict);
+	
 	KH_DictSet(myDict, KH_BlobForString("coffee"), KH_BlobForString("stain"));
 	KH_DictSet(myDict, KH_BlobForString("shitstain"), KH_BlobForString("coffeestain"));
 	KH_DictSet(myDict, KH_BlobForString("knot"), KH_BlobForString("one two six"));
 	KH_DictSet(myDict, KH_BlobForString(":3"), KH_BlobForString("UwU"));
 	
+	// print_slots(myDict);
+	
 	KH_DictSet(myDict, KH_BlobForString("poop"), KH_BlobForString("name of my cat!"));
 	KH_DictSet(myDict, KH_BlobForString("skibidi"), KH_BlobForString("L rizz"));
 	
-	KH_DictDelete(myDict, KH_BlobForString("skibidi"));
+	// PHAS("poop");
+	// PHAS("skibidi");
 	
+	print_dict(myDict);
+	
+	print_slots(myDict);
+	printf("** delete skibidi **\n");
+	KH_DictDelete(myDict, KH_BlobForString("skibidi"));
+	print_slots(myDict);
+	printf("** delete urmom **\n");
+	KH_DictDelete(myDict, KH_BlobForString("urmom"));
+	print_slots(myDict);
+	
+	PHAS("hello");
+	PHAS("balls");
+	PHAS("place");
+	PHAS(":3");
+	
+	printf("Value for %s: %s\n", "coffee", KH_DictGet(myDict, KH_BlobForString("coffee"))->data);
+	printf("Value for %s: %s\n", "knot", KH_DictGet(myDict, KH_BlobForString("knot"))->data);
+	printf("Value for %s: %s\n", "balls", KH_DictGet(myDict, KH_BlobForString("balls"))->data);
 	printf("Value for %s: %s\n", ":3", KH_DictGet(myDict, KH_BlobForString(":3"))->data);
 	
 	print_dict(myDict);
