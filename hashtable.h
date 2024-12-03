@@ -58,8 +58,6 @@ typedef struct KH_Dict {
 } KH_Dict;
 
 #ifdef KHASHTABLE_IMPLEMENTATION
-void print_slots(KH_Dict *dict);
-
 static kh_hash_t KH_Hash(const uint8_t *buffer, const size_t length) {
 	kh_hash_t hash = 5381;
 	
@@ -158,7 +156,6 @@ static KH_Dict *KH_ResizeDict(KH_Dict *self) {
 			break;
 		}
 		
-		// printf("copy kv pair i=0x%zx j=0x%zx\n", i, j);
 		new_pairs[j].key = self->pairs[i].key;
 		new_pairs[j].value = self->pairs[i].value;
 		KH_InsertSlot(new_slots, new_size, new_pairs[j].key->hash, j);
@@ -219,35 +216,25 @@ static size_t KH_DictLookupIndex(KH_Dict *self, KH_Blob *key) {
 	 * if none was found.
 	 */
 	
-	// printf("------------ LOOKUP INDEX -------------\n");
-	// print_slots(self);
-	
 	uint32_t slot_index = KH_BlobStartingIndexForSize(key->hash, self->data_alloced);
-	
-	// printf("--------------\nStarting slot index: 0x%x\n", slot_index);
 	
 	for (size_t i = 0; i < self->data_alloced; i++) {
 		KH_Slot slot = self->slots[(slot_index + i) & (self->data_alloced - 1)];
 		
-		// printf("Slot value: 0x%x\n", slot);
-		
 		// Empty, never-used slot which won't have anything we're looking for
 		// located after it
 		if (slot == KH_HASH_EMPTY) {
-			// printf("Empty, break\n");
 			break;
 		}
 		
 		// Once used slot which may still have hits after it
 		if (slot == KH_HASH_DELETED) {
-			// printf("Deleted, continue\n");
 			continue;
 		}
 		
 		// If the key we're looking up matches the key indexed by the current
 		// slot, this is a hit and it should be returned.
 		if (KH_BlobEqual(key, self->pairs[slot].key)) {
-			// printf("Found!!\n");
 			return slot;
 		}
 	}
@@ -274,35 +261,25 @@ static void KH_DictRemove(KH_Dict *self, size_t index) {
 	
 	self->data_count--;
 	
-	// printf("self->slots=<%p>\n", self->slots);
-	
 	// Fix up the slots
 	for (size_t i = 0; i < self->data_alloced; i++) {
-		// printf("index=0x%zx, self->slots[0x%zx]=0x%x: ", index, i, self->slots[i]);
-		
 		// If its already deleted or empty then no fixup should be needed
 		if (self->slots[i] == KH_HASH_DELETED || self->slots[i] == KH_HASH_EMPTY) {
-			// printf("skip\n");
 			continue;
 		}
 		
 		// If it's greater than the current index we need to decrement one
 		else if (self->slots[i] > index) {
 			self->slots[i] -= 1;
-			// printf("decrement index to 0x%x\n", self->slots[i]);
-			// print_slots(self);
 		}
 		
 		// If it's the index we deleted we need to mark it deleted
 		else if (self->slots[i] == index) {
-			// printf("mark delete\n");
 			self->slots[i] = KH_HASH_DELETED;
-			// print_slots(self);
 		}
 		
 		// The other case (slot is less than index) requires no action
 		else {
-			// printf("do nothing\n");
 		}
 	}
 }
@@ -383,7 +360,6 @@ bool KH_DictDelete(KH_Dict *self, KH_Blob *key) {
 		return false;
 	}
 	else {
-		printf("Delete item at index 0x%zx\n", index);
 		KH_DictRemove(self, index);
 		free(key);
 		return true;

@@ -29,31 +29,21 @@ int main(int argc, char *argv[]) {
 	KH_DictSet(myDict, KH_BlobForString("iscute"), KH_BlobForString("no :<"));
 	KH_DictSet(myDict, KH_BlobForString("urmom"), KH_BlobForString("hehehe"));
 	
-	// print_slots(myDict);
-	
 	KH_DictSet(myDict, KH_BlobForString("coffee"), KH_BlobForString("stain"));
 	KH_DictSet(myDict, KH_BlobForString("shitstain"), KH_BlobForString("coffeestain"));
 	KH_DictSet(myDict, KH_BlobForString("knot"), KH_BlobForString("one two six"));
 	KH_DictSet(myDict, KH_BlobForString(":3"), KH_BlobForString("UwU"));
 	
-	// print_slots(myDict);
-	
 	KH_DictSet(myDict, KH_BlobForString("poop"), KH_BlobForString("name of my cat!"));
 	KH_DictSet(myDict, KH_BlobForString("skibidi"), KH_BlobForString("L rizz"));
 	
-	// PHAS("poop");
-	// PHAS("skibidi");
-	
 	print_dict(myDict);
 	
-	print_slots(myDict);
-	printf("** delete skibidi **\n");
 	KH_DictDelete(myDict, KH_BlobForString("skibidi"));
-	print_slots(myDict);
-	printf("** delete urmom **\n");
 	KH_DictDelete(myDict, KH_BlobForString("urmom"));
-	print_slots(myDict);
 	
+	PHAS("skibidi");
+	PHAS("urmom");
 	PHAS("hello");
 	PHAS("balls");
 	PHAS("place");
