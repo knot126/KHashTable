@@ -18,6 +18,14 @@ int main(int argc, char *argv[]) {
 	KH_DictSet(myDict, KH_BlobForString("hello"), KH_BlobForString("world!"));
 	KH_DictSet(myDict, KH_BlobForString("balls"), KH_BlobForString("I have 69 balls!"));
 	KH_DictSet(myDict, KH_BlobForString("iscute"), KH_BlobForString("no :<"));
+	KH_DictSet(myDict, KH_BlobForString("urmom"), KH_BlobForString("hehehe"));
+	
+	KH_DictSet(myDict, KH_BlobForString("coffee"), KH_BlobForString("stain"));
+	KH_DictSet(myDict, KH_BlobForString("shitstain"), KH_BlobForString("coffeestain"));
+	KH_DictSet(myDict, KH_BlobForString("knot"), KH_BlobForString("one two six"));
+	KH_DictSet(myDict, KH_BlobForString(":3"), KH_BlobForString("UwU"));
+	
+	KH_DictSet(myDict, KH_BlobForString("poop"), KH_BlobForString("name of my cat!"));
 	
 	print_dict(myDict);
 	

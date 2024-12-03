@@ -183,7 +183,7 @@ static bool KH_DictInsert(KH_Dict *self, KH_Blob *key, KH_Blob *value) {
 	
 	// Resize if load factor > 0.625, around Wikipedia's recommendation of
 	// resizing at 0.6-0.75
-	if (((self->data_count >> 1) + (self->data_count >> 3)) >= self->data_alloced) {
+	if (self->data_count >= ((self->data_alloced >> 1) + (self->data_alloced >> 3))) {
 		self = KH_ResizeDict(self);
 		
 		if (!self) {
