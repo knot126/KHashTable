@@ -1,3 +1,27 @@
+/**
+ * Knot's Blob-to-Blob Hash Table -- Copyright (C) 2024 Knot126
+ * 
+ * This single-header library implements a basic hash table which can map
+ * arbitrary blobs of data to other arbitrary blobs of data. 'Blob' basically
+ * means strings including NUL's.
+ * 
+ * The hash table has the following properties:
+ *   - Uses the DJB2 hash function
+ *   - Collision resolution using open addressing
+ *   - Preserves the order of keys by insertion by storing indexes to values in
+ *     slots instead of the values themselves
+ *   - Common case O(1) insert, update, retrieve, and member check
+ *   - O(n) delete (makes deleting keys less complex with order-preserving)
+ *   - Only supports power-of-two capacity sizes ATM
+ * 
+ * Some general usage notes:
+ *   - Exposed hash table functions never make internal copies of KH_Blob's, but
+ *     they will always free them if they aren't used longer term. They "steal"
+ *     them, per se. This applies even to functions like KH_DictHas().
+ *   - In functions where KH_Blob's are returned, copies are also NOT made. You
+ *     should not mutate them.
+ */
+
 #ifndef _KH_HEADER
 #define _KH_HEADER
 #include <string.h>
@@ -18,9 +42,6 @@ typedef struct KH_Blob {
 	const uint8_t data[0];
 } KH_Blob;
 
-// typedef struct KH_Slot {
-// 	uint32_t index;
-// } KH_Slot;
 typedef struct uint32_t KH_Slot;
 
 typedef struct KH_DictPair {
@@ -121,8 +142,10 @@ static KH_Dict *KH_ResizeDict(KH_Dict *self) {
 	size_t j = 0;
 	
 	for (size_t i = 0; i < self->data_alloced; i++) {
+		// This used to continue, but since it can never be sparse due the the
+		// current way we delete things just breaking is faster.
 		if (!self->pairs[i].key || !self->pairs[i].value) {
-			continue;
+			break;
 		}
 		
 		new_pairs[j].key = self->pairs[i].key;
@@ -169,6 +192,16 @@ static bool KH_DictInsert(KH_Dict *self, KH_Blob *key, KH_Blob *value) {
 	return true;
 }
 
+static void KH_DictChange(KH_Dict *self, size_t index, KH_Blob *value) {
+	/**
+	 * Change the value for a key that already exists, given the index to the
+	 * key.
+	 */
+	
+	free(self->pairs[index].value);
+	self->pairs[index].value = value;
+}
+
 static size_t KH_DictLookupIndex(KH_Dict *self, KH_Blob *key) {
 	/**
 	 * Find the index of a pair given its key. Returns the index or KH_NOT_FOUND
@@ -201,14 +234,39 @@ static size_t KH_DictLookupIndex(KH_Dict *self, KH_Blob *key) {
 	return KH_NOT_FOUND;
 }
 
-static void KH_DictChange(KH_Dict *self, size_t index, KH_Blob *value) {
+static void KH_DictRemove(KH_Dict *self, size_t index) {
 	/**
-	 * Change the value for a key that already exists, given the index to the
-	 * key.
+	 * Deletes the value at the given index, and updates the slots as needed.
 	 */
 	
+	// Free key and value, they arent needed anymore
+	free(self->pairs[index].key);
 	free(self->pairs[index].value);
-	self->pairs[index].value = value;
+	
+	// Move pairs to lower indexes
+	memmove(&self->pairs[index], &self->pairs[index + 1], (size_t)&self->pairs[index + 1] - (size_t)&self->pairs[self->data_count]);
+	
+	self->data_count--;
+	
+	// Fix up the slots
+	for (size_t i = 0; i < self->data_alloced; i++) {
+		// If its already deleted or empty then no fixup should be needed
+		if (self->slots[i] == KH_HASH_DELETED || self->slots[i] == KH_HASH_EMPTY) {
+			continue;
+		}
+		
+		// If it's greater than the current index we need to decrement one
+		if (self->slots[i] > index) {
+			self->slots[i] -= 1;
+		}
+		
+		// If it's the index we deleted we need to mark it deleted
+		if (self->slots[i] == index) {
+			self->slots[i] = KH_HASH_DELETED;
+		}
+		
+		// The other case (slot is less than index) requires no action
+	}
 }
 
 bool KH_DictSet(KH_Dict *self, KH_Blob *key, KH_Blob *value) {
@@ -236,6 +294,8 @@ KH_Blob *KH_DictGet(KH_Dict *self, KH_Blob *key) {
 	
 	size_t index = KH_DictLookupIndex(self, key);
 	
+	free(key);
+	
 	if (index == KH_NOT_FOUND) {
 		return NULL;
 	}
@@ -249,7 +309,45 @@ bool KH_DictHas(KH_Dict *self, KH_Blob *key) {
 	 * Check if the dict has a pair with a given key
 	 */
 	
-	return KH_DictLookupIndex(self, key) != KH_NOT_FOUND;
+	bool result = KH_DictLookupIndex(self, key) != KH_NOT_FOUND;
+	free(key);
+	return result;
+}
+
+bool KH_DictDelete(KH_Dict *self, KH_Blob *key) {
+	/**
+	 * Delete a key-value pair by its key
+	 */
+	
+	size_t index = KH_DictLookupIndex(self, key);
+	
+	if (index == KH_NOT_FOUND) {
+		free(key);
+		return false;
+	}
+	else {
+		KH_DictRemove(self, index);
+		free(key);
+		return true;
+	}
+}
+
+KH_Blob *KH_DictKeyIter(KH_Dict *self, size_t index) {
+	/**
+	 * Return the blob associated with the key at the given index. This can be
+	 * used to iterate all keys in the dict, with a return value of NULL
+	 * signaling the end of the dict.
+	 */
+	
+	return (index < self->data_count) ? self->pairs[index].key : NULL;
+}
+
+KH_Blob *KH_DictValueIter(KH_Dict *self, size_t index) {
+	/**
+	 * Return the blob associated with the value at the given index.
+	 */
+	
+	return (index < self->data_count) ? self->pairs[index].value : NULL;
 }
 #endif // KHASHTABLE_IMPLEMENTATION
 
