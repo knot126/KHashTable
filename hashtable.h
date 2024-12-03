@@ -81,6 +81,10 @@ KH_Blob *KH_CreateBlob(uint8_t *buffer, size_t length) {
 	return blob;
 }
 
+KH_Blob *KH_BlobForString(const char *str) {
+	return KH_CreateBlob(str, strlen(str) + 1);
+}
+
 static bool KH_BlobEqual(KH_Blob *blob1, KH_Blob *blob2) {
 	if (blob1 == blob2) {
 		return true;
@@ -269,6 +273,25 @@ static void KH_DictRemove(KH_Dict *self, size_t index) {
 	}
 }
 
+KH_Dict *KH_CreateDict(void) {
+	KH_Dict *dict = malloc(sizeof *dict);
+	memset(dict, 0, sizeof *dict);
+	return dict;
+}
+
+void KH_ReleaseDict(KH_Dict *dict) {
+	free(dict->slots);
+	
+	for (size_t i = 0; i < dict->data_count; i++) {
+		free(dict->pairs[i].key);
+		free(dict->pairs[i].value);
+	}
+	
+	free(dict->pairs);
+	
+	free(dict);
+}
+
 bool KH_DictSet(KH_Dict *self, KH_Blob *key, KH_Blob *value) {
 	/**
 	 * Insert a (key, value) pair into the dictionary, overwriting any existing
@@ -348,6 +371,14 @@ KH_Blob *KH_DictValueIter(KH_Dict *self, size_t index) {
 	 */
 	
 	return (index < self->data_count) ? self->pairs[index].value : NULL;
+}
+
+size_t KH_DictLen(KH_Dict *self) {
+	/**
+	 * Return the number of key-value pairs in this dict
+	 */
+	
+	return self->data_count;
 }
 #endif // KHASHTABLE_IMPLEMENTATION
 
