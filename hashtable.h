@@ -220,7 +220,7 @@ static size_t KH_DictLookupIndex(KH_Dict *self, KH_Blob *key) {
 	uint32_t slot_index = KH_BlobStartingIndexForSize(key->hash, self->data_alloced);
 	
 	for (size_t i = 0; i < self->data_alloced; i++) {
-		KH_Slot slot = self->slots[(slot_index + i) & (self->data_count - 1)];
+		KH_Slot slot = self->slots[(slot_index + i) & (self->data_alloced - 1)];
 		
 		// Empty, never-used slot which won't have anything we're looking for
 		// located after it

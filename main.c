@@ -26,6 +26,11 @@ int main(int argc, char *argv[]) {
 	KH_DictSet(myDict, KH_BlobForString(":3"), KH_BlobForString("UwU"));
 	
 	KH_DictSet(myDict, KH_BlobForString("poop"), KH_BlobForString("name of my cat!"));
+	KH_DictSet(myDict, KH_BlobForString("skibidi"), KH_BlobForString("L rizz"));
+	
+	KH_DictDelete(myDict, KH_BlobForString("skibidi"));
+	
+	printf("Value for %s: %s\n", ":3", KH_DictGet(myDict, KH_BlobForString(":3"))->data);
 	
 	print_dict(myDict);
 	
