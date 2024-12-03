@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 enum {
 	KH_HASH_EMPTY = 0xffffffff,
