@@ -89,6 +89,7 @@
  *     on success, and false on failure.
  *   
  *   - KH_Blob *KH_DictGet(KH_Dict *dict, KH_Blob *key)
+ *     
  *     Gets the blob assocaited with the given key. The blob returned should be
  *     treated as immutable and should not be freed, since it's the same one
  *     used to store the blob internally. Returns NULL if there isn't a value
@@ -111,13 +112,16 @@
  * Other hash table functions:
  * 
  *   - size_t KH_DictLen(KH_Dict *dict)
+ *     
  *     Return the number of entries in the hash table.
  *   
  *   - KH_Blob *KH_DictKeyIter(KH_Dict *dict, size_t index)
+ *     
  *     Return the key for the i-th key-value pair in the dictionary, or NULL
  *     if it would be out of bounds.
  *   
  *   - KH_Blob *KH_DictValueIter(KH_Dict *dict, size_t index)
+ *     
  *     Return the value for the i-th key-value pair in the dictionary, or NULL
  *     if it would be out of bounds.
  * 
